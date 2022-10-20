@@ -1,0 +1,416 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 1000px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 1000px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "lynx | Earth +", "label": "lynx | Earth +", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "label": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "ekez", "label": "ekez", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "elsehow", "label": "elsehow", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "case", "label": "case", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "blockcreators", "label": "blockcreators", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "barton", "label": "barton", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ben2x4", "label": "Ben2x4", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Maxjuno", "label": "Maxjuno", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Callum", "label": "Callum", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "noahsaso", "label": "noahsaso", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "orkunkle", "label": "orkunkle", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "oz", "label": "oz", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Jame5", "label": "Jame5", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "baoskees", "label": "baoskees", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "kain", "label": "kain", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "bluenote", "label": "bluenote", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "pyramation", "label": "pyramation", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nova", "label": "nova", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Apollo", "label": "Apollo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Trevor | Croncat", "label": "Trevor | Croncat", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "riada", "label": "riada", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "envy", "label": "envy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Naturalist", "label": "Naturalist", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "ethanfrey", "label": "ethanfrey", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "whiskey", "label": "whiskey", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mamimi", "label": "mamimi", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "de_husk", "label": "de_husk", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lunarpunk durruti", "label": "lunarpunk durruti", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Avicenna", "label": "Avicenna", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "gavindoughtie", "label": "gavindoughtie", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "elgorithm", "label": "elgorithm", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "LexRex", "label": "LexRex", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nikktrfn", "label": "nikktrfn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "modern-edamame", "label": "modern-edamame", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jackzampolin", "label": "jackzampolin", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "the-frey", "label": "the-frey", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "sashimi36", "label": "sashimi36", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "erikameredith", "label": "erikameredith", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Simon | Confio", "label": "Simon | Confio", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "wearautomatic", "label": "wearautomatic", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "ezracafe", "label": "ezracafe", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "findolor", "label": "findolor", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Griko Nibras", "label": "Griko Nibras", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Kevin | Oni Validator \u26e9", "label": "Kevin | Oni Validator \u26e9", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nullmames", "label": "nullmames", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "vt", "label": "vt", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "chung", "label": "chung", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "TYLANDERR", "label": "TYLANDERR", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Lovis", "label": "Lovis", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Julius", "label": "Julius", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Mike Purvis", "label": "Mike Purvis", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "shashankgoyal", "label": "shashankgoyal", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Highlander | ChainTools", "label": "Highlander | ChainTools", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Marbar", "label": "Marbar", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "albttx", "label": "albttx", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "cypherape", "label": "cypherape", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "whalelephantK", "label": "whalelephantK", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nicolas20", "label": "nicolas20", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "benskey", "label": "benskey", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Gavin | knowable.vc", "label": "Gavin | knowable.vc", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "CauseLessHarmRae", "label": "CauseLessHarmRae", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "serr_jpg  | Rebels_nft", "label": "serr_jpg  | Rebels_nft", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "grubcowboy (\u2728,\ud83d\udd2d)", "label": "grubcowboy (\u2728,\ud83d\udd2d)", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Musky Melon", "label": "Musky Melon", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "kyledrake", "label": "kyledrake", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Seabizquik", "label": "Seabizquik", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "aswever", "label": "aswever", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Greg-Szabo", "label": "Greg-Szabo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Moltres", "label": "Moltres", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Crypto Cyborg 2029", "label": "Crypto Cyborg 2029", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Gnoman", "label": "Gnoman", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "ZorroTamalito", "label": "ZorroTamalito", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Jacob | AtlasDAO", "label": "Jacob | AtlasDAO", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Nupur | Parcel", "label": "Nupur | Parcel", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "DoubleDotC", "label": "DoubleDotC", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "utamadush", "label": "utamadush", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "returniflost", "label": "returniflost", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Rapha | DeCrypto", "label": "Rapha | DeCrypto", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "dk", "label": "dk", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mauro", "label": "mauro", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jvanderen1", "label": "jvanderen1", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "bubblez", "label": "bubblez", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "djuno", "label": "djuno", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Buckram", "label": "Buckram", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "dimi \ud83e\udd99", "label": "dimi \ud83e\udd99", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Pleiades", "label": "Pleiades", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "anselm", "label": "anselm", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Ethereal", "label": "Ethereal", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Borg", "label": "Borg", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "DeVeus", "label": "DeVeus", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "rakataprime", "label": "rakataprime", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "leafwind", "label": "leafwind", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "spoo_bar", "label": "spoo_bar", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jajajojohoho", "label": "jajajojohoho", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "starrybot", "label": "starrybot", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Laura-b", "label": "Laura-b", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "TendermintTimmy", "label": "TendermintTimmy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Averlyth", "label": "Averlyth", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "coquinator", "label": "coquinator", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "sneedpilled", "label": "sneedpilled", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Didryx", "label": "Didryx", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "Xiti", "label": "Xiti", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"from": "lynx | Earth +", "to": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "width": 0.1}, {"from": "lynx | Earth +", "to": "ekez", "width": 0.03333333333333333}, {"from": "lynx | Earth +", "to": "elsehow", "width": 0.03333333333333333}, {"from": "lynx | Earth +", "to": "case", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "blockcreators", "width": 0.36666666666666664}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "barton", "width": 0.5}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Ben2x4", "width": 3.466666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "ekez", "width": 13.8}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Maxjuno", "width": 0.8333333333333334}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Callum", "width": 4.3}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "elsehow", "width": 5.9}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "noahsaso", "width": 4.433333333333334}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "orkunkle", "width": 1.6333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "oz", "width": 0.2}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Jame5", "width": 1.1}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "baoskees", "width": 0.5333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "case", "width": 2.1333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "kain", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "bluenote", "width": 1.0333333333333334}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "pyramation", "width": 0.23333333333333334}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "nova", "width": 0.13333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Apollo", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Trevor | Croncat", "width": 0.3333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "riada", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "envy", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Naturalist", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "ethanfrey", "width": 1.0}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "whiskey", "width": 0.13333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "mamimi", "width": 0.23333333333333334}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "de_husk", "width": 0.4}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "lunarpunk durruti", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Avicenna", "width": 0.1}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "gavindoughtie", "width": 3.466666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "elgorithm", "width": 2.2333333333333334}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "LexRex", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "nikktrfn", "width": 0.13333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "modern-edamame", "width": 3.7}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "jackzampolin", "width": 0.6666666666666666}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "the-frey", "width": 0.36666666666666664}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "sashimi36", "width": 0.16666666666666666}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "erikameredith", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Simon | Confio", "width": 0.26666666666666666}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "wearautomatic", "width": 0.16666666666666666}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "ezracafe", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "findolor", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Griko Nibras", "width": 0.1}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Kevin | Oni Validator \u26e9", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "nullmames", "width": 0.26666666666666666}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "vt", "width": 0.4}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "chung", "width": 0.16666666666666666}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "TYLANDERR", "width": 0.1}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Lovis", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Julius", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Mike Purvis", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "shashankgoyal", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Highlander | ChainTools", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Marbar", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "albttx", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "cypherape", "width": 0.23333333333333334}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "whalelephantK", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "nicolas20", "width": 0.43333333333333335}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "benskey", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "Gavin | knowable.vc", "width": 0.03333333333333333}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "CauseLessHarmRae", "width": 0.06666666666666667}, {"from": "Meow  \u2728\ud83d\udd2d\u26b5\u262f", "to": "serr_jpg  | Rebels_nft", "width": 0.06666666666666667}, {"from": "elsehow", "to": "the-frey", "width": 0.6333333333333333}, {"from": "elsehow", "to": "ekez", "width": 6.466666666666667}, {"from": "elsehow", "to": "baoskees", "width": 0.6666666666666666}, {"from": "elsehow", "to": "case", "width": 2.933333333333333}, {"from": "elsehow", "to": "grubcowboy (\u2728,\ud83d\udd2d)", "width": 0.16666666666666666}, {"from": "elsehow", "to": "noahsaso", "width": 10.6}, {"from": "elsehow", "to": "elgorithm", "width": 0.8}, {"from": "elsehow", "to": "barton", "width": 0.16666666666666666}, {"from": "elsehow", "to": "nova", "width": 0.23333333333333334}, {"from": "elsehow", "to": "Callum", "width": 1.4666666666666666}, {"from": "elsehow", "to": "Musky Melon", "width": 0.16666666666666666}, {"from": "elsehow", "to": "bluenote", "width": 1.0}, {"from": "elsehow", "to": "Lovis", "width": 0.06666666666666667}, {"from": "elsehow", "to": "kyledrake", "width": 0.03333333333333333}, {"from": "elsehow", "to": "envy", "width": 0.2}, {"from": "elsehow", "to": "de_husk", "width": 0.9666666666666667}, {"from": "elsehow", "to": "CauseLessHarmRae", "width": 0.13333333333333333}, {"from": "elsehow", "to": "whiskey", "width": 0.3}, {"from": "elsehow", "to": "benskey", "width": 0.03333333333333333}, {"from": "elsehow", "to": "Avicenna", "width": 0.03333333333333333}, {"from": "elsehow", "to": "gavindoughtie", "width": 0.5666666666666667}, {"from": "elsehow", "to": "Ben2x4", "width": 0.7666666666666667}, {"from": "elsehow", "to": "LexRex", "width": 0.06666666666666667}, {"from": "elsehow", "to": "modern-edamame", "width": 6.133333333333334}, {"from": "elsehow", "to": "mamimi", "width": 0.23333333333333334}, {"from": "elsehow", "to": "wearautomatic", "width": 0.23333333333333334}, {"from": "elsehow", "to": "Maxjuno", "width": 0.2}, {"from": "elsehow", "to": "Jame5", "width": 0.03333333333333333}, {"from": "elsehow", "to": "Seabizquik", "width": 0.1}, {"from": "elsehow", "to": "Griko Nibras", "width": 0.06666666666666667}, {"from": "elsehow", "to": "aswever", "width": 0.03333333333333333}, {"from": "elsehow", "to": "albttx", "width": 0.06666666666666667}, {"from": "elsehow", "to": "jackzampolin", "width": 0.3}, {"from": "elsehow", "to": "ethanfrey", "width": 0.1}, {"from": "elsehow", "to": "sashimi36", "width": 0.03333333333333333}, {"from": "elsehow", "to": "chung", "width": 0.03333333333333333}, {"from": "elsehow", "to": "TYLANDERR", "width": 0.03333333333333333}, {"from": "elsehow", "to": "Julius", "width": 0.1}, {"from": "elsehow", "to": "nullmames", "width": 0.3}, {"from": "elsehow", "to": "Mike Purvis", "width": 0.03333333333333333}, {"from": "elsehow", "to": "orkunkle", "width": 0.16666666666666666}, {"from": "elsehow", "to": "Greg-Szabo", "width": 0.03333333333333333}, {"from": "elsehow", "to": "oz", "width": 0.03333333333333333}, {"from": "elsehow", "to": "findolor", "width": 0.03333333333333333}, {"from": "elsehow", "to": "nicolas20", "width": 0.03333333333333333}, {"from": "elsehow", "to": "whalelephantK", "width": 0.03333333333333333}, {"from": "elsehow", "to": "Moltres", "width": 0.13333333333333333}, {"from": "elsehow", "to": "Crypto Cyborg 2029", "width": 0.6}, {"from": "elsehow", "to": "Gnoman", "width": 0.03333333333333333}, {"from": "elsehow", "to": "ZorroTamalito", "width": 0.13333333333333333}, {"from": "elsehow", "to": "Jacob | AtlasDAO", "width": 0.06666666666666667}, {"from": "elsehow", "to": "Nupur | Parcel", "width": 0.1}, {"from": "elsehow", "to": "DoubleDotC", "width": 0.1}, {"from": "elsehow", "to": "utamadush", "width": 0.03333333333333333}, {"from": "elsehow", "to": "returniflost", "width": 0.06666666666666667}, {"from": "elsehow", "to": "Rapha | DeCrypto", "width": 0.03333333333333333}, {"from": "the-frey", "to": "ethanfrey", "width": 0.3}, {"from": "the-frey", "to": "gavindoughtie", "width": 0.4}, {"from": "the-frey", "to": "elgorithm", "width": 0.03333333333333333}, {"from": "the-frey", "to": "ekez", "width": 0.5666666666666667}, {"from": "the-frey", "to": "nikktrfn", "width": 0.03333333333333333}, {"from": "the-frey", "to": "Callum", "width": 0.3333333333333333}, {"from": "the-frey", "to": "Ben2x4", "width": 0.1}, {"from": "the-frey", "to": "orkunkle", "width": 0.13333333333333333}, {"from": "blockcreators", "to": "ekez", "width": 0.3}, {"from": "blockcreators", "to": "Callum", "width": 0.1}, {"from": "blockcreators", "to": "noahsaso", "width": 0.03333333333333333}, {"from": "blockcreators", "to": "elgorithm", "width": 0.1}, {"from": "blockcreators", "to": "modern-edamame", "width": 0.06666666666666667}, {"from": "blockcreators", "to": "pyramation", "width": 0.03333333333333333}, {"from": "blockcreators", "to": "Jame5", "width": 0.03333333333333333}, {"from": "blockcreators", "to": "bluenote", "width": 0.06666666666666667}, {"from": "barton", "to": "case", "width": 0.13333333333333333}, {"from": "barton", "to": "nova", "width": 0.03333333333333333}, {"from": "barton", "to": "baoskees", "width": 0.1}, {"from": "barton", "to": "bluenote", "width": 0.3}, {"from": "barton", "to": "ekez", "width": 0.9666666666666667}, {"from": "barton", "to": "noahsaso", "width": 0.1}, {"from": "barton", "to": "gavindoughtie", "width": 0.06666666666666667}, {"from": "barton", "to": "Jame5", "width": 0.06666666666666667}, {"from": "barton", "to": "Ben2x4", "width": 0.03333333333333333}, {"from": "barton", "to": "Callum", "width": 0.06666666666666667}, {"from": "barton", "to": "de_husk", "width": 0.13333333333333333}, {"from": "barton", "to": "nicolas20", "width": 0.06666666666666667}, {"from": "barton", "to": "ethanfrey", "width": 0.03333333333333333}, {"from": "Ben2x4", "to": "elgorithm", "width": 0.13333333333333333}, {"from": "Ben2x4", "to": "case", "width": 0.16666666666666666}, {"from": "Ben2x4", "to": "nova", "width": 0.03333333333333333}, {"from": "Ben2x4", "to": "baoskees", "width": 0.16666666666666666}, {"from": "Ben2x4", "to": "dk", "width": 0.03333333333333333}, {"from": "Ben2x4", "to": "gavindoughtie", "width": 0.26666666666666666}, {"from": "Ben2x4", "to": "Simon | Confio", "width": 0.03333333333333333}, {"from": "Ben2x4", "to": "noahsaso", "width": 0.26666666666666666}, {"from": "Ben2x4", "to": "ekez", "width": 1.8}, {"from": "Ben2x4", "to": "modern-edamame", "width": 0.06666666666666667}, {"from": "Ben2x4", "to": "orkunkle", "width": 0.43333333333333335}, {"from": "Ben2x4", "to": "Jame5", "width": 0.03333333333333333}, {"from": "Ben2x4", "to": "ethanfrey", "width": 0.13333333333333333}, {"from": "Ben2x4", "to": "mauro", "width": 0.06666666666666667}, {"from": "Ben2x4", "to": "Callum", "width": 0.43333333333333335}, {"from": "Ben2x4", "to": "vt", "width": 0.16666666666666666}, {"from": "Ben2x4", "to": "bluenote", "width": 0.03333333333333333}, {"from": "Ben2x4", "to": "whalelephantK", "width": 0.03333333333333333}, {"from": "ekez", "to": "baoskees", "width": 2.1333333333333333}, {"from": "ekez", "to": "Callum", "width": 11.133333333333333}, {"from": "ekez", "to": "Jame5", "width": 0.7}, {"from": "ekez", "to": "modern-edamame", "width": 4.666666666666667}, {"from": "ekez", "to": "wearautomatic", "width": 0.4}, {"from": "ekez", "to": "case", "width": 3.4}, {"from": "ekez", "to": "oz", "width": 0.06666666666666667}, {"from": "ekez", "to": "noahsaso", "width": 9.833333333333334}, {"from": "ekez", "to": "elgorithm", "width": 2.3}, {"from": "ekez", "to": "jvanderen1", "width": 0.03333333333333333}, {"from": "ekez", "to": "Apollo", "width": 0.03333333333333333}, {"from": "ekez", "to": "Musky Melon", "width": 0.13333333333333333}, {"from": "ekez", "to": "bluenote", "width": 7.666666666666667}, {"from": "ekez", "to": "Griko Nibras", "width": 0.23333333333333334}, {"from": "ekez", "to": "gavindoughtie", "width": 1.0666666666666667}, {"from": "ekez", "to": "aswever", "width": 0.1}, {"from": "ekez", "to": "de_husk", "width": 2.1666666666666665}, {"from": "ekez", "to": "nova", "width": 0.03333333333333333}, {"from": "ekez", "to": "whiskey", "width": 0.9666666666666667}, {"from": "ekez", "to": "envy", "width": 0.1}, {"from": "ekez", "to": "bubblez", "width": 0.03333333333333333}, {"from": "ekez", "to": "CauseLessHarmRae", "width": 0.5}, {"from": "ekez", "to": "mamimi", "width": 0.13333333333333333}, {"from": "ekez", "to": "orkunkle", "width": 0.5666666666666667}, {"from": "ekez", "to": "Maxjuno", "width": 2.2}, {"from": "ekez", "to": "ezracafe", "width": 0.06666666666666667}, {"from": "ekez", "to": "djuno", "width": 0.03333333333333333}, {"from": "ekez", "to": "Trevor | Croncat", "width": 0.26666666666666666}, {"from": "ekez", "to": "sashimi36", "width": 0.03333333333333333}, {"from": "ekez", "to": "ethanfrey", "width": 0.4666666666666667}, {"from": "ekez", "to": "Mike Purvis", "width": 0.13333333333333333}, {"from": "ekez", "to": "Buckram", "width": 1.1}, {"from": "ekez", "to": "Avicenna", "width": 0.2}, {"from": "ekez", "to": "jackzampolin", "width": 0.13333333333333333}, {"from": "ekez", "to": "dimi \ud83e\udd99", "width": 0.06666666666666667}, {"from": "ekez", "to": "chung", "width": 0.03333333333333333}, {"from": "ekez", "to": "TYLANDERR", "width": 0.3333333333333333}, {"from": "ekez", "to": "Pleiades", "width": 0.03333333333333333}, {"from": "ekez", "to": "Julius", "width": 0.1}, {"from": "ekez", "to": "nullmames", "width": 0.43333333333333335}, {"from": "ekez", "to": "vt", "width": 0.06666666666666667}, {"from": "ekez", "to": "anselm", "width": 0.03333333333333333}, {"from": "ekez", "to": "Ethereal", "width": 0.03333333333333333}, {"from": "ekez", "to": "whalelephantK", "width": 0.5}, {"from": "ekez", "to": "cypherape", "width": 0.5333333333333333}, {"from": "ekez", "to": "pyramation", "width": 0.13333333333333333}, {"from": "ekez", "to": "Borg", "width": 1.0666666666666667}, {"from": "ekez", "to": "nicolas20", "width": 0.9666666666666667}, {"from": "ekez", "to": "DeVeus", "width": 0.03333333333333333}, {"from": "ekez", "to": "rakataprime", "width": 0.06666666666666667}, {"from": "ekez", "to": "albttx", "width": 0.03333333333333333}, {"from": "ekez", "to": "benskey", "width": 0.23333333333333334}, {"from": "ekez", "to": "returniflost", "width": 0.3}, {"from": "ekez", "to": "Jacob | AtlasDAO", "width": 0.03333333333333333}, {"from": "ekez", "to": "leafwind", "width": 0.3333333333333333}, {"from": "ekez", "to": "Moltres", "width": 0.1}, {"from": "ekez", "to": "Crypto Cyborg 2029", "width": 0.26666666666666666}, {"from": "ekez", "to": "spoo_bar", "width": 0.1}, {"from": "ekez", "to": "Rapha | DeCrypto", "width": 0.06666666666666667}, {"from": "Maxjuno", "to": "noahsaso", "width": 0.1}, {"from": "Maxjuno", "to": "Callum", "width": 0.26666666666666666}, {"from": "Maxjuno", "to": "case", "width": 0.36666666666666664}, {"from": "Maxjuno", "to": "envy", "width": 0.03333333333333333}, {"from": "Maxjuno", "to": "elgorithm", "width": 0.06666666666666667}, {"from": "Maxjuno", "to": "ethanfrey", "width": 0.03333333333333333}, {"from": "Maxjuno", "to": "Maxjuno", "width": 0.03333333333333333}, {"from": "Maxjuno", "to": "bluenote", "width": 0.13333333333333333}, {"from": "Maxjuno", "to": "modern-edamame", "width": 0.06666666666666667}, {"from": "Callum", "to": "baoskees", "width": 0.13333333333333333}, {"from": "Callum", "to": "case", "width": 0.6}, {"from": "Callum", "to": "noahsaso", "width": 1.4333333333333333}, {"from": "Callum", "to": "albttx", "width": 0.03333333333333333}, {"from": "Callum", "to": "aswever", "width": 0.16666666666666666}, {"from": "Callum", "to": "nova", "width": 0.06666666666666667}, {"from": "Callum", "to": "mamimi", "width": 0.13333333333333333}, {"from": "Callum", "to": "bluenote", "width": 1.8333333333333333}, {"from": "Callum", "to": "envy", "width": 0.06666666666666667}, {"from": "Callum", "to": "de_husk", "width": 0.6}, {"from": "Callum", "to": "modern-edamame", "width": 0.06666666666666667}, {"from": "Callum", "to": "elgorithm", "width": 0.1}, {"from": "Callum", "to": "ethanfrey", "width": 0.3333333333333333}, {"from": "Callum", "to": "gavindoughtie", "width": 0.13333333333333333}, {"from": "Callum", "to": "Trevor | Croncat", "width": 0.3}, {"from": "Callum", "to": "wearautomatic", "width": 0.06666666666666667}, {"from": "Callum", "to": "whalelephantK", "width": 0.06666666666666667}, {"from": "Callum", "to": "pyramation", "width": 0.06666666666666667}, {"from": "Callum", "to": "orkunkle", "width": 0.06666666666666667}, {"from": "Callum", "to": "Jame5", "width": 0.13333333333333333}, {"from": "Callum", "to": "nullmames", "width": 0.13333333333333333}, {"from": "Callum", "to": "nicolas20", "width": 0.23333333333333334}, {"from": "Callum", "to": "Borg", "width": 0.7}, {"from": "Callum", "to": "cypherape", "width": 0.1}, {"from": "Callum", "to": "Mike Purvis", "width": 0.03333333333333333}, {"from": "Callum", "to": "Buckram", "width": 0.2}, {"from": "Callum", "to": "benskey", "width": 0.06666666666666667}, {"from": "noahsaso", "to": "baoskees", "width": 1.7333333333333334}, {"from": "noahsaso", "to": "case", "width": 1.5}, {"from": "noahsaso", "to": "elgorithm", "width": 1.8666666666666667}, {"from": "noahsaso", "to": "bluenote", "width": 3.2666666666666666}, {"from": "noahsaso", "to": "nova", "width": 0.2}, {"from": "noahsaso", "to": "pyramation", "width": 0.1}, {"from": "noahsaso", "to": "de_husk", "width": 1.2333333333333334}, {"from": "noahsaso", "to": "grubcowboy (\u2728,\ud83d\udd2d)", "width": 0.23333333333333334}, {"from": "noahsaso", "to": "Mike Purvis", "width": 0.26666666666666666}, {"from": "noahsaso", "to": "whiskey", "width": 1.7666666666666666}, {"from": "noahsaso", "to": "CauseLessHarmRae", "width": 0.1}, {"from": "noahsaso", "to": "Avicenna", "width": 0.13333333333333333}, {"from": "noahsaso", "to": "jajajojohoho", "width": 0.03333333333333333}, {"from": "noahsaso", "to": "gavindoughtie", "width": 0.13333333333333333}, {"from": "noahsaso", "to": "ethanfrey", "width": 0.13333333333333333}, {"from": "noahsaso", "to": "Musky Melon", "width": 0.16666666666666666}, {"from": "noahsaso", "to": "wearautomatic", "width": 0.03333333333333333}, {"from": "noahsaso", "to": "mamimi", "width": 0.23333333333333334}, {"from": "noahsaso", "to": "modern-edamame", "width": 2.966666666666667}, {"from": "noahsaso", "to": "Griko Nibras", "width": 0.5333333333333333}, {"from": "noahsaso", "to": "Seabizquik", "width": 0.03333333333333333}, {"from": "noahsaso", "to": "albttx", "width": 0.16666666666666666}, {"from": "noahsaso", "to": "Julius", "width": 0.06666666666666667}, {"from": "noahsaso", "to": "sashimi36", "width": 0.03333333333333333}, {"from": "noahsaso", "to": "nullmames", "width": 0.13333333333333333}, {"from": "noahsaso", "to": "orkunkle", "width": 0.03333333333333333}, {"from": "noahsaso", "to": "returniflost", "width": 0.06666666666666667}, {"from": "noahsaso", "to": "Rapha | DeCrypto", "width": 0.13333333333333333}, {"from": "noahsaso", "to": "jackzampolin", "width": 0.03333333333333333}, {"from": "orkunkle", "to": "findolor", "width": 0.1}, {"from": "orkunkle", "to": "elgorithm", "width": 0.2}, {"from": "orkunkle", "to": "Jame5", "width": 0.03333333333333333}, {"from": "orkunkle", "to": "bluenote", "width": 0.1}, {"from": "orkunkle", "to": "de_husk", "width": 0.03333333333333333}, {"from": "orkunkle", "to": "nullmames", "width": 0.06666666666666667}, {"from": "orkunkle", "to": "jackzampolin", "width": 0.06666666666666667}, {"from": "oz", "to": "Jame5", "width": 0.06666666666666667}, {"from": "oz", "to": "case", "width": 0.06666666666666667}, {"from": "baoskees", "to": "ethanfrey", "width": 0.06666666666666667}, {"from": "baoskees", "to": "gavindoughtie", "width": 0.2}, {"from": "baoskees", "to": "Jame5", "width": 0.23333333333333334}, {"from": "baoskees", "to": "elgorithm", "width": 0.5333333333333333}, {"from": "baoskees", "to": "nova", "width": 0.4}, {"from": "baoskees", "to": "case", "width": 1.0}, {"from": "baoskees", "to": "bluenote", "width": 0.7333333333333333}, {"from": "baoskees", "to": "wearautomatic", "width": 0.13333333333333333}, {"from": "baoskees", "to": "pyramation", "width": 0.03333333333333333}, {"from": "baoskees", "to": "Apollo", "width": 0.03333333333333333}, {"from": "baoskees", "to": "grubcowboy (\u2728,\ud83d\udd2d)", "width": 0.2}, {"from": "baoskees", "to": "de_husk", "width": 0.13333333333333333}, {"from": "baoskees", "to": "mamimi", "width": 0.06666666666666667}, {"from": "baoskees", "to": "modern-edamame", "width": 0.8333333333333334}, {"from": "baoskees", "to": "Trevor | Croncat", "width": 0.26666666666666666}, {"from": "baoskees", "to": "Lovis", "width": 0.03333333333333333}, {"from": "ethanfrey", "to": "Naturalist", "width": 0.06666666666666667}, {"from": "ethanfrey", "to": "elgorithm", "width": 0.1}, {"from": "ethanfrey", "to": "gavindoughtie", "width": 0.23333333333333334}, {"from": "ethanfrey", "to": "jackzampolin", "width": 0.16666666666666666}, {"from": "ethanfrey", "to": "Marbar", "width": 0.03333333333333333}, {"from": "ethanfrey", "to": "nicolas20", "width": 0.06666666666666667}, {"from": "ethanfrey", "to": "de_husk", "width": 0.03333333333333333}, {"from": "Jame5", "to": "mamimi", "width": 0.1}, {"from": "Jame5", "to": "elgorithm", "width": 0.26666666666666666}, {"from": "Jame5", "to": "case", "width": 0.06666666666666667}, {"from": "Jame5", "to": "gavindoughtie", "width": 0.03333333333333333}, {"from": "modern-edamame", "to": "case", "width": 0.9}, {"from": "modern-edamame", "to": "gavindoughtie", "width": 0.3}, {"from": "modern-edamame", "to": "mamimi", "width": 0.1}, {"from": "modern-edamame", "to": "Musky Melon", "width": 0.06666666666666667}, {"from": "modern-edamame", "to": "sashimi36", "width": 0.16666666666666666}, {"from": "modern-edamame", "to": "elgorithm", "width": 0.3}, {"from": "modern-edamame", "to": "dk", "width": 0.03333333333333333}, {"from": "modern-edamame", "to": "nova", "width": 0.03333333333333333}, {"from": "modern-edamame", "to": "nullmames", "width": 0.1}, {"from": "modern-edamame", "to": "wearautomatic", "width": 0.06666666666666667}, {"from": "modern-edamame", "to": "chung", "width": 0.1}, {"from": "modern-edamame", "to": "TYLANDERR", "width": 0.03333333333333333}, {"from": "modern-edamame", "to": "Trevor | Croncat", "width": 0.3}, {"from": "modern-edamame", "to": "Julius", "width": 0.03333333333333333}, {"from": "modern-edamame", "to": "pyramation", "width": 0.03333333333333333}, {"from": "wearautomatic", "to": "case", "width": 0.16666666666666666}, {"from": "wearautomatic", "to": "gavindoughtie", "width": 0.03333333333333333}, {"from": "wearautomatic", "to": "elgorithm", "width": 0.03333333333333333}, {"from": "wearautomatic", "to": "Musky Melon", "width": 0.03333333333333333}, {"from": "mamimi", "to": "case", "width": 0.4}, {"from": "mamimi", "to": "nova", "width": 0.03333333333333333}, {"from": "mamimi", "to": "gavindoughtie", "width": 0.3}, {"from": "mamimi", "to": "elgorithm", "width": 0.43333333333333335}, {"from": "mamimi", "to": "Mike Purvis", "width": 0.1}, {"from": "gavindoughtie", "to": "case", "width": 0.06666666666666667}, {"from": "gavindoughtie", "to": "elgorithm", "width": 1.5}, {"from": "gavindoughtie", "to": "jackzampolin", "width": 0.06666666666666667}, {"from": "gavindoughtie", "to": "nikktrfn", "width": 0.13333333333333333}, {"from": "gavindoughtie", "to": "Simon | Confio", "width": 0.16666666666666666}, {"from": "gavindoughtie", "to": "whalelephantK", "width": 0.03333333333333333}, {"from": "elgorithm", "to": "nova", "width": 0.03333333333333333}, {"from": "elgorithm", "to": "case", "width": 0.16666666666666666}, {"from": "elgorithm", "to": "bluenote", "width": 0.1}, {"from": "elgorithm", "to": "sashimi36", "width": 0.06666666666666667}, {"from": "elgorithm", "to": "Simon | Confio", "width": 0.03333333333333333}, {"from": "elgorithm", "to": "Trevor | Croncat", "width": 0.2}, {"from": "elgorithm", "to": "jvanderen1", "width": 0.03333333333333333}, {"from": "elgorithm", "to": "pyramation", "width": 0.03333333333333333}, {"from": "elgorithm", "to": "nikktrfn", "width": 0.03333333333333333}, {"from": "nova", "to": "case", "width": 0.8}, {"from": "nova", "to": "Musky Melon", "width": 0.06666666666666667}, {"from": "nova", "to": "jackzampolin", "width": 0.03333333333333333}, {"from": "nova", "to": "starrybot", "width": 0.03333333333333333}, {"from": "nova", "to": "bluenote", "width": 0.03333333333333333}, {"from": "case", "to": "Mike Purvis", "width": 0.13333333333333333}, {"from": "case", "to": "grubcowboy (\u2728,\ud83d\udd2d)", "width": 0.16666666666666666}, {"from": "case", "to": "bluenote", "width": 1.2}, {"from": "case", "to": "Trevor | Croncat", "width": 0.5}, {"from": "case", "to": "kain", "width": 0.03333333333333333}, {"from": "case", "to": "pyramation", "width": 0.06666666666666667}, {"from": "case", "to": "Apollo", "width": 0.03333333333333333}, {"from": "case", "to": "riada", "width": 0.1}, {"from": "case", "to": "Naturalist", "width": 0.03333333333333333}, {"from": "case", "to": "envy", "width": 0.13333333333333333}, {"from": "case", "to": "Gavin | knowable.vc", "width": 0.03333333333333333}, {"from": "case", "to": "Laura-b", "width": 0.03333333333333333}, {"from": "case", "to": "de_husk", "width": 0.06666666666666667}, {"from": "case", "to": "lunarpunk durruti", "width": 0.03333333333333333}, {"from": "case", "to": "starrybot", "width": 0.2}, {"from": "case", "to": "whiskey", "width": 0.03333333333333333}, {"from": "case", "to": "CauseLessHarmRae", "width": 0.06666666666666667}, {"from": "case", "to": "benskey", "width": 0.03333333333333333}, {"from": "case", "to": "nullmames", "width": 0.06666666666666667}, {"from": "case", "to": "jackzampolin", "width": 0.06666666666666667}, {"from": "bluenote", "to": "Musky Melon", "width": 0.06666666666666667}, {"from": "bluenote", "to": "de_husk", "width": 1.0}, {"from": "bluenote", "to": "TendermintTimmy", "width": 0.03333333333333333}, {"from": "bluenote", "to": "whiskey", "width": 0.23333333333333334}, {"from": "bluenote", "to": "Trevor | Croncat", "width": 0.1}, {"from": "bluenote", "to": "nicolas20", "width": 0.4}, {"from": "bluenote", "to": "cypherape", "width": 0.03333333333333333}, {"from": "bluenote", "to": "Borg", "width": 0.06666666666666667}, {"from": "bluenote", "to": "Buckram", "width": 0.1}, {"from": "bluenote", "to": "nullmames", "width": 0.16666666666666666}, {"from": "bluenote", "to": "Averlyth", "width": 0.03333333333333333}, {"from": "Trevor | Croncat", "to": "sashimi36", "width": 0.03333333333333333}, {"from": "Apollo", "to": "whiskey", "width": 0.03333333333333333}, {"from": "jackzampolin", "to": "TYLANDERR", "width": 0.03333333333333333}, {"from": "jackzampolin", "to": "findolor", "width": 0.03333333333333333}, {"from": "pyramation", "to": "de_husk", "width": 0.06666666666666667}, {"from": "aswever", "to": "envy", "width": 0.03333333333333333}, {"from": "starrybot", "to": "starrybot", "width": 0.1}, {"from": "envy", "to": "CauseLessHarmRae", "width": 0.03333333333333333}, {"from": "envy", "to": "whiskey", "width": 0.03333333333333333}, {"from": "de_husk", "to": "whiskey", "width": 0.06666666666666667}, {"from": "de_husk", "to": "nicolas20", "width": 0.16666666666666666}, {"from": "CauseLessHarmRae", "to": "Gnoman", "width": 0.06666666666666667}, {"from": "CauseLessHarmRae", "to": "leafwind", "width": 0.13333333333333333}, {"from": "CauseLessHarmRae", "to": "coquinator", "width": 0.03333333333333333}, {"from": "CauseLessHarmRae", "to": "sneedpilled", "width": 0.03333333333333333}, {"from": "CauseLessHarmRae", "to": "Nupur | Parcel", "width": 0.06666666666666667}, {"from": "CauseLessHarmRae", "to": "returniflost", "width": 0.06666666666666667}, {"from": "CauseLessHarmRae", "to": "Didryx", "width": 0.03333333333333333}, {"from": "findolor", "to": "nullmames", "width": 0.06666666666666667}, {"from": "returniflost", "to": "serr_jpg  | Rebels_nft", "width": 0.13333333333333333}, {"from": "returniflost", "to": "sneedpilled", "width": 0.03333333333333333}, {"from": "returniflost", "to": "Xiti", "width": 0.06666666666666667}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"barnesHut": {"gravitationalConstant": -24800}, "minVelocity": 0.75}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
